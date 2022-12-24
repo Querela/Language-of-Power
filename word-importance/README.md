@@ -9,6 +9,7 @@
   * `numpy`, `pandas`, `scipy` for numerical computation
   * `scikit-learn` for model training
   * `matplotlib` for plotting figures
+  * `jupyterlab` for Jupyter Notebooks with examples
 * To run all: `python3 compute.py`
 
 ## Distribution of Scores and Quantiles
