@@ -446,3 +446,17 @@ Self vs. Judges
 </details>
 
 </details>
+
+
+## Word Importance Analysis
+
+We compute **word importance scores** by training a [_logistic regression_ model](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression) and extracting the model coefficients as scores.
+
+As input features, we compute the [TF-IDF word-document matrix](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfTransformer.html). E.g. we compute word frequencies per document and performing some averaging. _Optional: filtering by part-of-speech word category is also possible but we included all words besides stop words._
+The document scores (by judges or self-judged) for _dominance_, _power_, _prestige_, and _workplace_power_ (only study 2) are the target values for our model. The scores are being transformed to classes (1, 2, ..., 7) by rounding, and the model has to predict those classes from the input features.
+We train a model for each of the three (four) categories (_dominance_, ...).
+
+From the trained model, we extract the coefficients for each input feature (word) for each score class. We aggregate the coefficients over all the classes by summing the scaled coefficients, i.e. coefficients for low document scores (e.g. 1, 2, ...) are weighted more negatively in the calculation, while high scores (..., 6, 7) are weighted more positively. This results in strong coefficients for low document scores being overall negativ while strong coefficients for high document scores are overall positiv.
+We finally scale the coefficients to the interval of `[-1, 1]` to obtain our word scores.
+
+The final word scores are in the Excel documents [`study1-coefs.xlsx`](study1-coefs.xlsx) and [`study2-coefs.xlsx`](study2-coefs.xlsx) as well as results for lemmatized words. _We performed some filtering to limit the results using a minimum threshold for the importance score and a restriction of `30` features per category. We ranked them by importance. Both positive and negative features are included. (It is possible to have no strong positive or negative features, so only one of both would be shown but we added the condition to include both._
