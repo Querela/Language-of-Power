@@ -1,0 +1,11 @@
+#jupyterlab
+
+numpy
+pandas
+scikit-learn
+scipy
+
+spacy
+
+openpyxl
+matplotlib
