@@ -469,7 +469,7 @@ Absolute word frequency values can be found in [`study1-output.xlsx`](study1-out
 
 We compute **word importance scores** by training a [_logistic regression_ model](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression) and extracting the model coefficients as scores.
 
-As input features, we compute the [TF-IDF word-document matrix](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfTransformer.html). E.g. we compute word frequencies per document and performing some averaging. _Optional: filtering by part-of-speech word category is also possible but we included all words besides stop words._
+As input features, we compute the [TF-IDF word-document matrix](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfTransformer.html). E.g., we compute word frequencies per document and performing some averaging. _Optional: filtering by part-of-speech word category is also possible but we included all words besides stop words._
 The document scores (by judges or self-judged) for _dominance_, _power_, _prestige_, and _workplace_power_ (only study 2) are the target values for our model. The scores are being transformed to classes (1, 2, ..., 7) by rounding, and the model has to predict those classes from the input features.
 We train a model for each of the three (four) categories (_dominance_, ...).
 
