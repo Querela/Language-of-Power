@@ -1,6 +1,20 @@
 # Word Importance
 
+## Run analysis and experiments
+
+* Requires data from https://osf.io/dwnxt/?view_only=e75faa4f54244361aa198e257b4fecf9. Download and extract in current folder.
+* Code requires Python 3.8.
+* Requirements can be found in [`requirements.txt`](requirements.txt).
+  * We use `spaCy` for POS (part-of-speech) tagging and filtering/cleaning (stopwords, non-words, etc.)
+  * `numpy`, `pandas`, `scipy` for numerical computation
+  * `scikit-learn` for model training
+  * `matplotlib` for plotting figures
+* To run all: `python3 compute.py`
+
 ## Distribution of Scores and Quantiles
+
+The following figures show the distribution of scores for the documents for each category: _dominance_, _prestige_, _power_, and _workplace power_ (only study 2).
+The vertical dashed lines represent the boundaries for the quantiles for low to mid and mid to high.
 
 ### Study 1
 
@@ -67,6 +81,8 @@ Self vs. Judges
 
 
 ## Word frequency analysis
+
+Absolute word frequency values can be found in [`study1-output.xlsx`](study1-output.xlsx) and [`study2-output.xlsx`](study2-output.xlsx).
 
 ### Study 1
 
