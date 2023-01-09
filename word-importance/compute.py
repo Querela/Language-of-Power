@@ -682,7 +682,7 @@ def train_model(df_study, what, doc_term_mat):
 
     # train model
     clf.fit(X, y)
-    LOGGER.debug("score: %s (for '%s')", clf.score(X, y), what)
+    LOGGER.info("score (on train): %s (for '%s')", clf.score(X, y), what)
 
     return clf
 
