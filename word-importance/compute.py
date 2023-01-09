@@ -14,6 +14,7 @@ import sklearn.linear_model
 import sklearn.preprocessing
 import spacy
 import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
 
 
 fn_study1_data = "Study 1/Data Study 1.xlsx"
@@ -269,6 +270,165 @@ def load_cached_data(fn_study_prepared="studydata.pickle"):
     df_study1, df_study2 = clean_study_data(df_study1, df_study2)
 
     return df_study1, df_study2
+
+
+# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+
+
+def make_word_freqs_for_top_N(df, N=None, weights_original=False):
+    # count number of tokens
+    def _token_freqs_fn(doc):
+        cnt = collections.Counter(doc)
+        num_tokens = sum(cnt.values())
+        return {word: num / num_tokens for word, num in cnt.items()}
+
+    df_freqs = df.map(_token_freqs_fn)
+
+    if N is None:
+        return df_freqs
+
+    # --------------------------------
+
+    # get N-most frequently occuring words (based on relative counts)
+    df_freqs_all = collections.Counter()
+    for doc in df_freqs.values.tolist():
+        df_freqs_all.update(doc)
+
+    # # set cutoff
+    # if N is None:
+    #     N = len(df_freqs_all)
+
+    types_top_N = df_freqs_all.most_common(N)
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug(
+            "Top-10 Types: %s",
+            ", ".join("{} ({:.2f})".format(w, c) for w, c in types_top_N[:10]),
+        )
+        LOGGER.debug(
+            "Bottom-10 Types: %s",
+            ", ".join("{} ({:.2f})".format(w, c) for w, c in types_top_N[-10:]),
+        )
+    types_top_N = dict(types_top_N)
+
+    # filter out types in documents that are not in top-N
+    types_to_keep = set(types_top_N.keys())
+
+    if weights_original:
+        # if we do not want to update the total token count, then we can just return here
+        def _filter_tokens_fn(doc):
+            return {k: v for k, v in doc.items() if k in types_to_keep}
+
+        return df_freqs.map(_filter_tokens_fn)
+
+    # --------------------------------
+
+    # get updated token weights --> since total token count changed, recompute
+    def _token_freqs_fn(doc):
+        cnt = collections.Counter(doc)
+        cnt = {k: v for k, v in cnt.items() if k in types_to_keep}
+        num_tokens = sum(cnt.values())
+        return {word: num / num_tokens for word, num in cnt.items()}
+
+    df_freqs = df.map(_token_freqs_fn)
+
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        df_freqs_all = collections.Counter()
+        for doc in df_freqs.values.tolist():
+            df_freqs_all.update(doc)
+
+        types_top_N = df_freqs_all.most_common(N)
+        LOGGER.debug(
+            "Top-10 Types: %s",
+            ", ".join("{} ({:.2f})".format(w, c) for w, c in types_top_N[:10]),
+        )
+        LOGGER.debug(
+            "Bottom-10 Types: %s",
+            ", ".join("{} ({:.2f})".format(w, c) for w, c in types_top_N[-10:]),
+        )
+
+    return df_freqs
+
+
+# --------------------------------------------------------------------------
+
+
+def _get_ranks(df):
+    types = collections.Counter()
+    for doc in df.values.tolist():
+        types.update(doc)
+    ordered = types.most_common()
+    return {word: rank for rank, (word, _) in enumerate(ordered, 1)}
+
+
+def make_token_rank_split_halves(df_freqs, types=None, random_state=None):
+    if types is None:
+        # generate list of all types (ordered descending)
+        types = collections.Counter()
+        for doc in df_freqs.values.tolist():
+            types.update(doc)
+        types = dict(types.most_common())
+
+    idx_shuffled = shuffle(df_freqs.index.values, random_state=random_state)
+    df_tok_a = df_freqs[idx_shuffled[: len(idx_shuffled) // 2]]
+    df_tok_b = df_freqs[idx_shuffled[len(idx_shuffled) // 2 :]]
+
+    ranks_a = _get_ranks(df_tok_a)
+    ranks_b = _get_ranks(df_tok_b)
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug(
+            "Ranks (half/a): %s", ", ".join(w for w, _ in list(ranks_a.items())[:10])
+        )
+        LOGGER.debug(
+            "Ranks (half/b): %s", ", ".join(w for w, _ in list(ranks_b.items())[:10])
+        )
+
+    types = list(types.keys())
+    ranklist_a = np.array([ranks_a.get(word, None) for word in types], dtype=float)
+    ranklist_b = np.array([ranks_b.get(word, None) for word in types], dtype=float)
+
+    return ranklist_a, ranklist_b, types
+
+
+def generate_token_rank_correlation_plot(
+    df_study, dn_output="figures", N=None, random_state=None
+):
+    os.makedirs(dn_output, exist_ok=True)
+
+    df_docs = df_study["text_spacy_doc_filtered"]
+    df_tokens = get_tokens_by_pos(df_docs, pos_list=None, lemma=False, join=False)
+    df_freqs = make_word_freqs_for_top_N(df_tokens, N=N)
+    ranklist_a, ranklist_b, types = make_token_rank_split_halves(
+        df_freqs, random_state=random_state
+    )
+    print(ranklist_a)
+    print(ranklist_b)
+
+    N = N if N is not None else len(types)
+    ranks = np.arange(1, N)
+    corrs = np.array(
+        [
+            scipy.stats.spearmanr(
+                ranklist_a[:cutoff], ranklist_b[:cutoff], nan_policy="omit"
+            ).correlation
+            for cutoff in ranks
+        ]
+    )
+
+    # TODO: smoothing?
+    # from scipy.signal import savgol_filter
+    # corrshat = savgol_filter(corrs, 41, 1) # window size 51, polynomial order 1
+
+    plt.plot(ranks, corrs)
+    # plt.plot(ranks, corrshat)
+    plt.title("Correlation at Rank")
+    plt.ylabel("Corrleation")
+    plt.xlabel("Rank")
+    plt.ylim((0, 1))
+    plt.savefig(
+        os.path.join(dn_output, "token_rank_correlation.png"), bbox_inches="tight"
+    )
+    plt.close()
 
 
 # --------------------------------------------------------------------------
@@ -844,7 +1004,7 @@ def train_and_write_coefs_to_excel(
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s"
+        level=logging.DEBUG, format="[%(levelname)s] %(name)s: %(message)s"
     )
     LOGGER.info("Run as script ...")
 
@@ -864,6 +1024,15 @@ if __name__ == "__main__":
     train_and_write_coefs_to_excel(df_study2, "study2-coefs.xlsx")
     train_and_write_coefs_to_excel(df_study1, "study1-coefs-lemma.xlsx", lemma=True)
     train_and_write_coefs_to_excel(df_study2, "study2-coefs-lemma.xlsx", lemma=True)
+
+    LOGGER.info("Compute half-split word token rank correlation ...")
+    random_state = 42
+    generate_token_rank_correlation_plot(
+        df_study1, dn_output="figures_study1", N=None, random_state=random_state
+    )
+    generate_token_rank_correlation_plot(
+        df_study2, dn_output="figures_study2", N=None, random_state=random_state
+    )
 
     LOGGER.info("Done.")
 
