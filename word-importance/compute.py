@@ -288,7 +288,7 @@ def make_word_freqs_for_top_N(df, N=None, weights_original=False):
     if N is None:
         return df_freqs
 
-    # --------------------------------
+    # --------------------------------------------------
 
     # get N-most frequently occuring words (based on relative counts)
     df_freqs_all = collections.Counter()
@@ -321,7 +321,7 @@ def make_word_freqs_for_top_N(df, N=None, weights_original=False):
 
         return df_freqs.map(_filter_tokens_fn)
 
-    # --------------------------------
+    # --------------------------------------------------
 
     # get updated token weights --> since total token count changed, recompute
     def _token_freqs_fn(doc):
@@ -996,6 +996,150 @@ def train_and_write_coefs_to_excel(
 
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+
+
+def compute_category_word_correlation(
+    df_study,
+    hier_var_cols,
+    doc_col="text_spacy_doc_filtered",
+    pos_list=None,
+    lemma=False,
+):
+    # scores
+    df_scores = df_study[hier_var_cols]
+
+    # preprocessed documents (spacy tokenized, some filtering of non-words)
+    df_documents = df_study[doc_col]
+
+    # --------------------------------------------------
+
+    # build a feature matrix (relative word frequency per document)
+    mat, words = build_feature_matrix(df_documents, pos_list=pos_list, lemma=lemma)
+    df_features = pd.DataFrame(mat.todense())
+    df_features.columns = words
+
+    # add prefix, just to be sure not to have overlaps
+    col_prefix = "hierarchy_variables:"
+    df_scores_prefixed = df_scores.add_prefix(col_prefix)
+    hier_var_cols_prefixed = ["{}{}".format(col_prefix, col) for col in hier_var_cols]
+
+    # add hierarchy variables
+    df_features = pd.merge(
+        df_features, df_scores_prefixed, left_index=True, right_index=True
+    )
+
+    # correlate
+    df_corrs = df_features.corr()
+
+    # just keep hierarchy variable colums
+    # (correlation hierarchy variable to words, based on score)
+    df_corrs = df_corrs[hier_var_cols_prefixed]
+
+    # remove correlation
+    df_corrs = df_corrs.drop(hier_var_cols_prefixed)
+
+    df_corrs = df_corrs.rename(columns=dict(zip(hier_var_cols_prefixed, hier_var_cols)))
+
+    return df_corrs
+
+
+def filter_category_word_correlations(
+    df_corrs, hier_var_cols, topn=20, require_both=True
+):
+    topn_half = topn // 2
+    if topn % 2 == 1:
+        topn_half += 1
+
+    # only filter out those per variable with N highest absolute values
+    mask = np.zeros_like(df_corrs.index).astype(bool)
+    for col in hier_var_cols:
+        if require_both:
+            srt = np.argsort(df_corrs[col])[::-1]
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug(
+                    "Pos-Top-%s of '%s': %s",
+                    topn_half,
+                    col,
+                    ", ".join(
+                        "{} ({:.2f})".format(w, v)
+                        for w, v in df_corrs[col][srt][:topn_half].to_dict().items()
+                    ),
+                )
+                LOGGER.debug(
+                    "Neg-Top-%s of '%s': %s",
+                    topn_half,
+                    col,
+                    ", ".join(
+                        "{} ({:.2f})".format(w, v)
+                        for w, v in df_corrs[col][srt][-topn_half:].to_dict().items()
+                    ),
+                )
+            mask[srt[:topn_half]] = True
+            mask[srt[-topn_half:]] = True
+        else:
+            srt = np.argsort(df_corrs[col].abs())[::-1]
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug(
+                    "Top-%s of '%s': %s",
+                    topn,
+                    col,
+                    ", ".join(
+                        "{} ({:.2f})".format(w, v)
+                        for w, v in df_corrs[col][srt][:topn].to_dict().items()
+                    ),
+                )
+            mask[srt[:topn]] = True
+
+    mask = pd.Series(mask, index=df_corrs.index)
+    return df_corrs[mask]
+
+
+def write_category_word_correlation_to_excel(
+    df_study,
+    fn_output="corrs.xlsx",
+    pos_list=None,
+    lemma=False,
+    topn=20,
+    require_both=True,
+):
+    # hierarchy variables (score) columns
+    pdp = ["power", "dominance", "prestige"]
+    pdpf = ["power_f", "dominance_f", "prestige_f"]
+    if "workplace_power" in df_study.columns:
+        pdp += ["workplace_power"]
+        pdpf += ["workplace_power_f"]
+
+    hier_var_cols = pdp + pdpf
+
+    df_corrs = compute_category_word_correlation(
+        df_study, hier_var_cols, pos_list=pos_list, lemma=lemma
+    )
+
+    if os.path.exists(fn_output):
+        os.unlink(fn_output)
+
+    mode = "a" if os.path.exists(fn_output) else "w"
+    ise = "overlay" if os.path.exists(fn_output) else None
+    with pd.ExcelWriter(fn_output, mode=mode, if_sheet_exists=ise) as writer:
+        df_corrs.to_excel(writer, sheet_name="Correlations (all)")
+
+        df_corrs_sub = filter_category_word_correlations(
+            df_corrs, hier_var_cols, topn=topn, require_both=require_both
+        )
+        df_corrs_sub.to_excel(writer, sheet_name=f"Correlations (Top-{topn})")
+
+        for col in hier_var_cols:
+            df_corrs_sub = filter_category_word_correlations(
+                df_corrs[[col]], [col], topn=topn, require_both=require_both
+            )
+            df_corrs_sub = df_corrs_sub.sort_values(
+                by=[col],
+                ascending=False,
+                # if sorted by "magnitude" (not just by value)
+                # key=lambda col: col.abs()
+            )
+            df_corrs_sub.to_excel(writer, sheet_name=f"{col} {topn}")
 
 
 # --------------------------------------------------------------------------
@@ -1004,7 +1148,7 @@ def train_and_write_coefs_to_excel(
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.DEBUG, format="[%(levelname)s] %(name)s: %(message)s"
+        level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s"
     )
     LOGGER.info("Run as script ...")
 
@@ -1033,6 +1177,10 @@ if __name__ == "__main__":
     generate_token_rank_correlation_plot(
         df_study2, dn_output="figures_study2", N=None, random_state=random_state
     )
+
+    LOGGER.info("Write Excel correlation data ...")
+    write_category_word_correlation_to_excel(df_study1, "study1-corrs.xlsx")
+    write_category_word_correlation_to_excel(df_study2, "study2-corrs.xlsx")
 
     LOGGER.info("Done.")
 
