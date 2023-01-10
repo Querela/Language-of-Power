@@ -255,7 +255,9 @@ def clean_study_data(
     return df_study1, df_study2
 
 
-def load_cached_data(fn_study_prepared="studydata.pickle"):
+def load_cached_data(
+    fn_study_prepared="studydata.pickle", do_clean_stopwords=True, do_clean_alpha=True
+):
     if not os.path.exists(fn_study_prepared):
         df_study1, df_study2 = prepare_study_data()
 
@@ -267,7 +269,12 @@ def load_cached_data(fn_study_prepared="studydata.pickle"):
         df_study1 = pickle.load(fp)
         df_study2 = pickle.load(fp)
 
-    df_study1, df_study2 = clean_study_data(df_study1, df_study2)
+    df_study1, df_study2 = clean_study_data(
+        df_study1,
+        df_study2,
+        do_clean_stopwords=do_clean_stopwords,
+        do_clean_alpha=do_clean_alpha,
+    )
 
     return df_study1, df_study2
 
@@ -1099,7 +1106,7 @@ def filter_category_word_correlations(
     return df_corrs[mask]
 
 
-def write_category_word_correlation_to_excel(
+def compute_and_write_category_word_correlation_to_excel(
     df_study,
     fn_output="corrs.xlsx",
     doc_col="text_spacy_doc_filtered",
@@ -1201,7 +1208,7 @@ if __name__ == "__main__":
     LOGGER.info("Run as script ...")
 
     LOGGER.info("Load data ...")
-    df_study1, df_study2 = load_cached_data()
+    df_study1, df_study2 = load_cached_data(do_clean_stopwords=True)
 
     LOGGER.info("Write Excel data ...")
     write_freqs_to_excel(df_study1, "study1-output.xlsx")
@@ -1211,11 +1218,19 @@ if __name__ == "__main__":
     generate_freqs_figures(df_study1, "figures_study1")
     generate_freqs_figures(df_study2, "figures_study2")
 
+    # --------------------------------------------------
+
     LOGGER.info("Compute word importance ...")
     train_and_write_coefs_to_excel(df_study1, "study1-coefs.xlsx")
     train_and_write_coefs_to_excel(df_study2, "study2-coefs.xlsx")
     train_and_write_coefs_to_excel(df_study1, "study1-coefs-lemma.xlsx", lemma=True)
     train_and_write_coefs_to_excel(df_study2, "study2-coefs-lemma.xlsx", lemma=True)
+
+    # --------------------------------------------------
+
+    # optionally reload without stopwords removed
+    # LOGGER.info("Load data ...")
+    # df_study1, df_study2 = load_cached_data(do_clean_stopwords=False)
 
     LOGGER.info("Compute half-split word token rank correlation ...")
     random_state = 42
@@ -1227,12 +1242,12 @@ if __name__ == "__main__":
     )
 
     LOGGER.info("Write Excel correlation data ...")
-    write_category_word_correlation_to_excel(df_study1, "study1-corrs.xlsx")
-    write_category_word_correlation_to_excel(df_study2, "study2-corrs.xlsx")
-    write_category_word_correlation_to_excel(
+    compute_and_write_category_word_correlation_to_excel(df_study1, "study1-corrs.xlsx")
+    compute_and_write_category_word_correlation_to_excel(df_study2, "study2-corrs.xlsx")
+    compute_and_write_category_word_correlation_to_excel(
         df_study1, "study1-corrs-tfidf.xlsx", tfidf=True
     )
-    write_category_word_correlation_to_excel(
+    compute_and_write_category_word_correlation_to_excel(
         df_study2, "study2-corrs-tfidf.xlsx", tfidf=True
     )
 

@@ -1,12 +1,14 @@
 # Language of Power - Experiments
 
-## Word Frequency and Importance Analysis
+## Word Frequency, Word Importance Analysis and Word--Hierarchy Variable Correlation
 
 See folder [`word-importance`](word-importance).
 * A lot of figures.
 * Document score distribution per category and quantils for low/mid/high score ranges.
 * Word frequency comparisons between categories, part-of-speech tags, etc.
 * Word importance calculation. E.g., which word contributes how much for high-power descriptions.
+* Word rank analysis and split-half correlation for reliability estimation of data.
+* Correlation between words and hierarchy variables (_power_, _dominance_, _prestige_).
 
 ## Other experiments
 

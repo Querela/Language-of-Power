@@ -1,4 +1,4 @@
-# Word Importance
+# Word Correlation and Feature Importance
 
 ## Run analysis and experiments
 
@@ -470,6 +470,7 @@ Absolute word frequency values can be found in [`study1-output.xlsx`](study1-out
 We correlate each word (of each description,) with each hierarchy variable _dominance_, _power_, _prestige_, and _workplace_power_ (only study 2) based on the document scores and the relative word frequencies.
 
 The final correlation scores are in the Excel documents [`study1-corrs.xlsx`](study1-corrs.xlsx) and [`study2-corrs.xlsx`](study2-corrs.xlsx). We truncated to the top-20 words (10 each for highest positive and negative values).
+Besides relative word frequencies (TF), we also included a variant using TF-IDF which lowers the importance of words appearing across all documents.
 
 ## Word Importance Analysis
 
