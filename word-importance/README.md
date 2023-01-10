@@ -465,6 +465,12 @@ Absolute word frequency values can be found in [`study1-output.xlsx`](study1-out
 </details>
 
 
+## Word Correlation Analysis
+
+We correlate each word (of each description,) with each hierarchy variable _dominance_, _power_, _prestige_, and _workplace_power_ (only study 2) based on the document scores and the relative word frequencies.
+
+The final correlation scores are in the Excel documents [`study1-corrs.xlsx`](study1-corrs.xlsx) and [`study2-corrs.xlsx`](study2-corrs.xlsx). We truncated to the top-20 words (10 each for highest positive and negative values).
+
 ## Word Importance Analysis
 
 We compute **word importance scores** by training a [_logistic regression_ model](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression) and extracting the model coefficients as scores.
