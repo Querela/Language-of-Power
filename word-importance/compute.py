@@ -1005,6 +1005,7 @@ def compute_category_word_correlation(
     doc_col="text_spacy_doc_filtered",
     pos_list=None,
     lemma=False,
+    tfidf=False,
 ):
     # scores
     df_scores = df_study[hier_var_cols]
@@ -1015,7 +1016,10 @@ def compute_category_word_correlation(
     # --------------------------------------------------
 
     # build a feature matrix (relative word frequency per document)
-    mat, words = build_feature_matrix(df_documents, pos_list=pos_list, lemma=lemma)
+    kwargs = dict(norm="l2", use_idf=True) if tfidf else dict()
+    mat, words = build_feature_matrix(
+        df_documents, pos_list=pos_list, lemma=lemma, **kwargs
+    )
     df_features = pd.DataFrame(mat.todense())
     df_features.columns = words
 
@@ -1098,10 +1102,13 @@ def filter_category_word_correlations(
 def write_category_word_correlation_to_excel(
     df_study,
     fn_output="corrs.xlsx",
+    doc_col="text_spacy_doc_filtered",
     pos_list=None,
     lemma=False,
+    tfidf=False,
     topn=20,
     require_both=True,
+    color=True,
 ):
     # hierarchy variables (score) columns
     pdp = ["power", "dominance", "prestige"]
@@ -1113,7 +1120,12 @@ def write_category_word_correlation_to_excel(
     hier_var_cols = pdp + pdpf
 
     df_corrs = compute_category_word_correlation(
-        df_study, hier_var_cols, pos_list=pos_list, lemma=lemma
+        df_study,
+        hier_var_cols,
+        doc_col=doc_col,
+        pos_list=pos_list,
+        lemma=lemma,
+        tfidf=tfidf,
     )
 
     if os.path.exists(fn_output):
@@ -1122,11 +1134,45 @@ def write_category_word_correlation_to_excel(
     mode = "a" if os.path.exists(fn_output) else "w"
     ise = "overlay" if os.path.exists(fn_output) else None
     with pd.ExcelWriter(fn_output, mode=mode, if_sheet_exists=ise) as writer:
-        df_corrs.to_excel(writer, sheet_name="Correlations (all)")
+
+        def _highlight_top_both(col, topn, props=""):
+            topn_half = topn // 2 + (1 if topn % 2 == 1 else 0)
+
+            return pd.Series(
+                props,
+                index=np.concatenate(
+                    [
+                        col.index[np.argsort(col)[::-1]][:topn_half],
+                        col.index[np.argsort(col)[::-1]][-topn_half:],
+                    ]
+                ),
+            )
+
+        def _highlight_top(col, topn, props=""):
+            return pd.Series(props, index=col.index[np.argsort(col.abs())[::-1]][:topn])
+
+        if color:
+            df_corrs.style.apply(
+                _highlight_top_both if require_both else _highlight_top,
+                topn=topn,
+                props="font-weight:bold;",
+                axis=0,
+            ).text_gradient(axis=0).to_excel(writer, sheet_name="Correlations (all)")
+        else:
+            df_corrs.to_excel(writer, sheet_name="Correlations (all)")
 
         df_corrs_sub = filter_category_word_correlations(
             df_corrs, hier_var_cols, topn=topn, require_both=require_both
         )
+
+        if color:
+            df_corrs_sub = df_corrs_sub.style.apply(
+                _highlight_top_both if require_both else _highlight_top,
+                topn=topn,
+                props="font-weight:bold;",
+                axis=0,
+            )
+
         df_corrs_sub.to_excel(writer, sheet_name=f"Correlations (Top-{topn})")
 
         for col in hier_var_cols:
@@ -1139,6 +1185,8 @@ def write_category_word_correlation_to_excel(
                 # if sorted by "magnitude" (not just by value)
                 # key=lambda col: col.abs()
             )
+            if color:
+                df_corrs_sub = df_corrs_sub.style.text_gradient(axis=0, cmap="RdYlGn")
             df_corrs_sub.to_excel(writer, sheet_name=f"{col} {topn}")
 
 
@@ -1181,6 +1229,12 @@ if __name__ == "__main__":
     LOGGER.info("Write Excel correlation data ...")
     write_category_word_correlation_to_excel(df_study1, "study1-corrs.xlsx")
     write_category_word_correlation_to_excel(df_study2, "study2-corrs.xlsx")
+    write_category_word_correlation_to_excel(
+        df_study1, "study1-corrs-tfidf.xlsx", tfidf=True
+    )
+    write_category_word_correlation_to_excel(
+        df_study2, "study2-corrs-tfidf.xlsx", tfidf=True
+    )
 
     LOGGER.info("Done.")
 
