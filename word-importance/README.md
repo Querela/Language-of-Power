@@ -506,3 +506,5 @@ Various runs were performed:
 - using data from either _Study 1_, _Study 2_ or both
 - with features from _DTM_ (document-term-matrix using TF-IDF), _LIWC_ or both (as well as scaled variants)
 - with target variables being either continuous (regression models) or categorical (classes 1..7 or low/mid/high by quantiles; classification models).
+
+Results are stored in [`results-crossvalidation.xlsx`](results-crossvalidation.xlsx).

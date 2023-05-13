@@ -1,6 +1,6 @@
-# Language of Power - Experiments
+# Language of Power - Linguistic Analyses
 
-## Word Frequency, Word Importance Analysis and Word--Hierarchy Variable Correlation, Cross-Validation Experiments
+## MAIN: Analysis of Word Frequency, Word Importance and Word-Hierarchy Variable Correlation, Cross-Validation
 
 See folder [`word-importance`](word-importance).
 * A lot of figures.
@@ -11,7 +11,9 @@ See folder [`word-importance`](word-importance).
 * Correlation between words and hierarchy variables (_power_, _dominance_, _prestige_).
 * Trying to predict hierarchy variables using classifiers and regressors in various scenarios. Using cross-validation and hyper-parameter search.
 
-## Other experiments
+We only reported results for our word frequency analyses and word correlations. Prediction of hierarchy variables with hyper-parameter search and cross-validated models did not produce reliable results. Further experiments and analyses were performed but not reported (see section below).
+
+## Other NLP analyses
 
 See notebooks in folder [`notebooks`](notebooks).
 * Topic modelling with LDA and HDP. Visualization using `pyLDAvis`. Some word clouds.
