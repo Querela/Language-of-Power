@@ -20,6 +20,41 @@ from sklearn.utils import shuffle
 fn_study1_data = "Study 1/Data Study 1.xlsx"
 fn_study2_data = "Study 2/Data Study 2.xlsx"
 
+# fmt: off
+COLS_LIWC_META = [
+    'Dic',
+]
+COLS_LIWC_IGNORE = [
+    'WC',
+    'WPS', 'Sixltr',
+]
+COLS_LIWC_REL = [
+    'Analytic', 'Clout', 'Authentic', 'Tone', 
+    'function', 'pronoun', 'ppron', 'i', 'we', 'you_total', 'you_sing', 'you_plur', 'you_formal', 'other', 'shehe', 'they', 'ipron', 'article', 'prep', 'auxverb', 'adverb', 'conj', 'negate', 'verb', 'adj', 'compare', 'interrog', 'number', 'quant',
+    'affect', 'posemo', 'negemo', 'anx', 'anger', 'sad', 'social', 'family', 'friend', 'female', 'male', 'cogproc', 'insight', 'cause', 'discrep', 'tentat', 'certain', 'differ', 'percept', 'see', 'hear', 'feel', 'bio', 'body', 'health', 'sexual', 'ingest', 'drives', 'affiliation', 'achiev', 'power', 'reward', 'risk', 'focuspast', 'focuspresent', 'focusfuture', 'relativ', 'motion', 'space', 'time', 'work', 'leisure', 'home', 'money', 'relig', 'death', 'informal', 'swear', 'netspeak', 'assent', 'nonflu', 'filler',
+    'AllPunc', 'Period', 'Comma', 'Colon', 'SemiC', 'QMark', 'Exclam', 'Dash', 'Quote', 'Apostro', 'Parenth', 'OtherP',
+]
+COLS_LIWC_ALL = COLS_LIWC_META + COLS_LIWC_IGNORE + COLS_LIWC_REL
+
+COL_TEXT = "text"
+COL_TEXT_SPACY = "text_spacy_doc"
+COL_TEXT_SPACY_CLEAN = "text_spacy_doc_filtered"
+
+COLS_SCORES = [
+    "s:power",
+    "s:dominance",
+    "s:prestige",
+    "s:power_f",
+    "s:dominance_f",
+    "s:prestige_f",
+]
+COLS_SCORES_S2 = [
+    "s:workplace_power",
+    "s:workplace_power_f",
+]
+COLS_SCORES_ALL = COLS_SCORES + COLS_SCORES_S2
+# fmt: on
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,19 +62,34 @@ LOGGER = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 
 
-def load_study1(fn_data=fn_study1_data):
+def load_study1(fn_data=fn_study1_data, load_text=True, load_meta=True, load_metrics=True, load_liwc=True):
     df_study1 = pd.read_excel(fn_data)
 
-    # just keep useful columns
-    df_study1 = df_study1[
-        [
-            # id
-            "ID",
+    cols = [
+        # id
+        "ID",
+    ]
+    col_renames = dict()
+    if load_text:
+        cols += [
             # raw text
             "SourceB",
+        ]
+        col_renames.update({
+            "SourceB": COL_TEXT,
+        })
+    if load_meta:
+        cols += [
             # other meta
             "Alter",
             "Geschlecht",
+        ]
+        col_renames.update({
+            "Alter": "age",
+            "Geschlecht": "gender",
+        })
+    if load_metrics:
+        cols += [
             # self-evaluation (mean)
             "Power_mean",
             "Dom_mean",
@@ -49,40 +99,54 @@ def load_study1(fn_data=fn_study1_data):
             "Dom_F",
             "Pres_F",
         ]
-    ]
+        col_renames.update({
+            "Power_mean": "s:power",
+            "Dom_mean": "s:dominance",
+            "Pres_mean": "s:prestige",
+            "Power_F": "s:power_f",
+            "Dom_F": "s:dominance_f",
+            "Pres_F": "s:prestige_f",
+        })
+    if load_liwc:
+        cols += COLS_LIWC_ALL
+
+    # just keep useful columns
+    df_study1 = df_study1[cols]
 
     # rename columns
-    df_study1.rename(
-        columns={
-            "SourceB": "text",
-            "Alter": "age",
-            "Geschlecht": "gender",
-            "Power_mean": "power",
-            "Dom_mean": "dominance",
-            "Pres_mean": "prestige",
-            "Power_F": "power_f",
-            "Dom_F": "dominance_f",
-            "Pres_F": "prestige_f",
-        },
-        inplace=True,
-    )
+    df_study1.rename(columns=col_renames, inplace=True)
 
     return df_study1
 
 
-def load_study2(fn_data=fn_study2_data):
+def load_study2(fn_data=fn_study2_data, load_text=True, load_meta=True, load_metrics=True, load_liwc=True):
     df_study2 = pd.read_excel(fn_data)
 
-    # just keep useful columns
-    df_study2 = df_study2[
-        [
-            # id
-            "ID",
+    cols = [
+        # id
+        "ID",
+    ]
+    col_renames = dict()
+    if load_text:
+        cols += [
             # raw text
             "SourceA",
+        ]
+        col_renames.update({
+            "SourceA": COL_TEXT,
+        })
+    if load_meta:
+        cols += [
             # other meta
             "Alter",
             "Geschlecht",
+        ]
+        col_renames.update({
+            "Alter": "age",
+            "Geschlecht": "gender",
+        })
+    if load_metrics:
+        cols += [
             # self-evaluation (mean)
             "Power_means",
             "Dominanz_means",
@@ -95,25 +159,24 @@ def load_study2(fn_data=fn_study2_data):
             "WP_means",
             "WP_Fremdgesamt_means",
         ]
-    ]
+        col_renames.update({
+            "Power_means": "s:power",
+            "Dominanz_means": "s:dominance",
+            "Prestige_means": "s:prestige",
+            "Power_Fremdgesamt_means": "s:power_f",
+            "Dominanz_Fremdgesamt_means": "s:dominance_f",
+            "Prestige_Fremdgesamt_means": "s:prestige_f",
+            "WP_means": "s:workplace_power",
+            "WP_Fremdgesamt_means": "s:workplace_power_f",
+        })
+    if load_liwc:
+        cols += COLS_LIWC_ALL
+
+    # just keep useful columns
+    df_study2 = df_study2[cols]
 
     # rename columns
-    df_study2.rename(
-        columns={
-            "SourceA": "text",
-            "Alter": "age",
-            "Geschlecht": "gender",
-            "Power_means": "power",
-            "Dominanz_means": "dominance",
-            "Prestige_means": "prestige",
-            "Power_Fremdgesamt_means": "power_f",
-            "Dominanz_Fremdgesamt_means": "dominance_f",
-            "Prestige_Fremdgesamt_means": "prestige_f",
-            "WP_means": "workplace_power",
-            "WP_Fremdgesamt_means": "workplace_power_f",
-        },
-        inplace=True,
-    )
+    df_study2.rename(columns=col_renames, inplace=True)
 
     return df_study2
 
@@ -213,8 +276,8 @@ def prepare_study_data():
     # nlp = spacy.load("de_core_news_sm")
     nlp = spacy.load("de_dep_news_trf")
 
-    df_study1["text_spacy_doc"] = nlpize(df_study1["text"], nlp)
-    df_study2["text_spacy_doc"] = nlpize(df_study2["text"], nlp)
+    df_study1[COL_TEXT_SPACY] = nlpize(df_study1[COL_TEXT], nlp)
+    df_study2[COL_TEXT_SPACY] = nlpize(df_study2[COL_TEXT], nlp)
 
     # --------------------------------------------------
     return df_study1, df_study2
@@ -224,29 +287,29 @@ def clean_study_data(
     df_study1, df_study2, do_clean_stopwords=True, do_clean_alpha=True
 ):
     LOGGER.info("Clean study data ...")
-    df_study1["text_spacy_doc_filtered"] = clean(
-        df_study1["text_spacy_doc"],
+    df_study1[COL_TEXT_SPACY_CLEAN] = clean(
+        df_study1[COL_TEXT_SPACY],
         stopwords=do_clean_stopwords,
         alpha=do_clean_alpha,
         punctuation=True,
     )
-    df_study2["text_spacy_doc_filtered"] = clean(
-        df_study2["text_spacy_doc"],
+    df_study2[COL_TEXT_SPACY_CLEAN] = clean(
+        df_study2[COL_TEXT_SPACY],
         stopwords=do_clean_stopwords,
         alpha=do_clean_alpha,
         punctuation=True,
     )
 
     # take raw text `tok.text` instead of lemma `tok.lemma_`
-    # df_study1["tokens"] = df_study1["text_spacy_doc_filtered"].map(lambda doc: list(map(lambda tok: tok.text, doc)))
-    # df_study2["tokens"] = df_study2["text_spacy_doc_filtered"].map(lambda doc: list(map(lambda tok: tok.text, doc)))
+    # df_study1["tokens"] = df_study1[COL_TEXT_SPACY_CLEAN].map(lambda doc: list(map(lambda tok: tok.text, doc)))
+    # df_study2["tokens"] = df_study2[COL_TEXT_SPACY_CLEAN].map(lambda doc: list(map(lambda tok: tok.text, doc)))
     # convert to plain string
     # df_study1["tokens"] = df_study1["tokens"].map(lambda doc: list(map(str, doc)))
     # df_study2["tokens"] = df_study2["tokens"].map(lambda doc: list(map(str, doc)))
 
     # Remove punctuation
-    # df_study1["text_processed"] = remove_punct(df_study1["text"])
-    # df_study2["text_processed"] = remove_punct(df_study2["text"])
+    # df_study1["text_processed"] = remove_punct(df_study1[COL_TEXT])
+    # df_study2["text_processed"] = remove_punct(df_study2[COL_TEXT])
     # Convert the titles to lowercase
     # df_study1['text_processed'] = lowercase_text(df_study1['text_processed'])
     # df_study2['text_processed'] = lowercase_text(df_study2['text_processed'])
@@ -402,7 +465,7 @@ def generate_token_rank_correlation_plot(
 ):
     os.makedirs(dn_output, exist_ok=True)
 
-    df_docs = df_study["text_spacy_doc_filtered"]
+    df_docs = df_study[COL_TEXT_SPACY_CLEAN]
     df_tokens = get_tokens_by_pos(df_docs, pos_list=None, lemma=False, join=False)
     df_freqs = make_word_freqs_for_top_N(df_tokens, N=N)
     ranklist_a, ranklist_b, types = make_token_rank_split_halves(
@@ -456,7 +519,7 @@ def make_word_freq_df(
     dfs_score = []
     for score in range(1, 8):  # range: [1, 7]
         mask = row == score
-        df_sub = df[mask]["text_spacy_doc_filtered"]
+        df_sub = df[mask][COL_TEXT_SPACY_CLEAN]
         tokens = get_tokens_by_pos(df_sub, pos_list=pos, lemma=lemma, join=True)
         cnt = collections.Counter(tokens)
 
@@ -492,7 +555,7 @@ def make_word_freq_score_comparison_df(
 ):
     dfs_cnts = []
     for mask, name in parts:
-        df_sub = df[mask]["text_spacy_doc_filtered"]
+        df_sub = df[mask][COL_TEXT_SPACY_CLEAN]
         tokens_low = get_tokens_by_pos(df_sub, pos_list=pos, lemma=lemma, join=True)
         cnt = collections.Counter(tokens_low)
         if LOGGER.isEnabledFor(logging.DEBUG):
@@ -604,7 +667,7 @@ def write_freqs_to_excel(
     with pd.ExcelWriter(fn_output) as writer:
         df_study_t = df_study.copy()
         df_study_t = df_study_t[list(set(df_study.columns) - {"text_spacy_doc"})]
-        df_study_t["text_spacy_doc_filtered"] = df_study_t[
+        df_study_t[COL_TEXT_SPACY_CLEAN] = df_study_t[
             "text_spacy_doc_filtered"
         ].map(lambda x: ", ".join(map(lambda tok: tok.text, x)))
         df_study_t.to_excel(writer, sheet_name="Study Data")
@@ -820,7 +883,7 @@ def build_feature_matrix(df, pos_list=None, lemma=False, norm="l1", use_idf=Fals
 
 
 def train_prepare(df_study, pos_list=None, lemma=False):
-    df_sub = df_study["text_spacy_doc_filtered"]
+    df_sub = df_study[COL_TEXT_SPACY_CLEAN]
     # doc_term_mat, features = build_count_matrix(df_sub, pos_list=pos_list, lemma=lemma)
     doc_term_mat, features = build_feature_matrix(
         df_sub, pos_list=pos_list, lemma=lemma, norm="l2", use_idf=True

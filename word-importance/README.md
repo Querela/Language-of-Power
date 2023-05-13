@@ -1,5 +1,7 @@
 # Word Correlation and Feature Importance
 
+&rarr; (1) [[Word Correlation Analysis](#word-correlation-analysis)] | (2) [[Word Importance Analysis](#word-importance-analysis)], [[Word frequency analysis](#word-frequency-analysis)] | (3) [[Cross-Validation and Hyper-Parameter Search](#cross-validation-and-hyper-parameter-search)]
+
 ## Run analysis and experiments
 
 * Requires data from https://osf.io/dwnxt/?view_only=e75faa4f54244361aa198e257b4fecf9. Download and extract in current folder.
@@ -11,8 +13,11 @@
   * `matplotlib` for plotting figures
   * `jupyterlab` for Jupyter Notebooks with examples
 * To run all: `python3 compute.py`
+* [`compute.py`](compute.py) contains shared code used in all the notebooks to load and process data as well as some utility functions.
 
 ## Distribution of Scores and Quantiles
+
+Notebook: [`WordFeature.ipynb`](WordFeature.ipynb)
 
 The following figures show the distribution of scores for the documents for each category: _dominance_, _prestige_, _power_, and _workplace power_ (only study 2).
 The vertical dashed lines represent the boundaries for the quantiles for low to mid and mid to high.
@@ -82,6 +87,8 @@ Self vs. Judges
 
 
 ## Word frequency analysis
+
+Notebook: [`WordFeature.ipynb`](WordFeature.ipynb)
 
 Absolute word frequency values can be found in [`study1-output.xlsx`](study1-output.xlsx) and [`study2-output.xlsx`](study2-output.xlsx).
 
@@ -467,12 +474,16 @@ Absolute word frequency values can be found in [`study1-output.xlsx`](study1-out
 
 ## Word Correlation Analysis
 
+Notebook: [`WordCorrelation.ipynb`](WordCorrelation.ipynb)
+
 We correlate each word (of each description,) with each hierarchy variable _dominance_, _power_, _prestige_, and _workplace_power_ (only study 2) based on the document scores and the relative word frequencies.
 
 The final correlation scores are in the Excel documents [`study1-corrs.xlsx`](study1-corrs.xlsx) and [`study2-corrs.xlsx`](study2-corrs.xlsx). We truncated to the top-20 words (10 each for highest positive and negative values).
 Besides relative word frequencies (TF), we also included a variant using TF-IDF which lowers the importance of words appearing across all documents.
 
 ## Word Importance Analysis
+
+Notebook: [`WordFeature.ipynb`](WordFeature.ipynb)
 
 We compute **word importance scores** by training a [_logistic regression_ model](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#sklearn.linear_model.LogisticRegression) and extracting the model coefficients as scores.
 
@@ -484,3 +495,14 @@ From the trained model, we extract the coefficients for each input feature (word
 We finally scale the coefficients to the interval of `[-1, 1]` to obtain our word scores.
 
 The final word scores are in the Excel documents [`study1-coefs.xlsx`](study1-coefs.xlsx) and [`study2-coefs.xlsx`](study2-coefs.xlsx) as well as results for lemmatized words. _We performed some filtering to limit the results using a minimum threshold for the importance score and a restriction of `30` features per category. We ranked them by importance. Both positive and negative features are included. (It is possible to have no strong positive or negative features, so only one of both would be shown but we added the condition to include both._
+
+## Cross-Validation and Hyper-Parameter Search
+
+Notebook: [`CrossValidation.ipynb`](CrossValidation.ipynb)
+
+Performing nested cross-validation and hyper-parameter search over study data to find best model to predict target hierarchy variables.
+
+Various runs were performed:
+- using data from either _Study 1_, _Study 2_ or both
+- with features from _DTM_ (document-term-matrix using TF-IDF), _LIWC_ or both (as well as scaled variants)
+- with target variables being either continuous (regression models) or categorical (classes 1..7 or low/mid/high by quantiles; classification models).

@@ -5,6 +5,7 @@ scipy
 #statsmodels
 
 spacy
+#spacy-transformers
 
 openpyxl
 matplotlib

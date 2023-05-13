@@ -1,6 +1,6 @@
 # Language of Power - Experiments
 
-## Word Frequency, Word Importance Analysis and Word--Hierarchy Variable Correlation
+## Word Frequency, Word Importance Analysis and Word--Hierarchy Variable Correlation, Cross-Validation Experiments
 
 See folder [`word-importance`](word-importance).
 * A lot of figures.
@@ -9,6 +9,7 @@ See folder [`word-importance`](word-importance).
 * Word importance calculation. E.g., which word contributes how much for high-power descriptions.
 * Word rank analysis and split-half correlation for reliability estimation of data.
 * Correlation between words and hierarchy variables (_power_, _dominance_, _prestige_).
+* Trying to predict hierarchy variables using classifiers and regressors in various scenarios. Using cross-validation and hyper-parameter search.
 
 ## Other experiments
 
